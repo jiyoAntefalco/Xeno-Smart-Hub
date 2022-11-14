@@ -33,6 +33,7 @@ local ServerList = Main.ServerList
 local ServerListObjects = ServerList.Objects
 local ServerListHeader = ServerList.Header
 local UserInterfaceKeybind = Main.UserInterfaceKeybind
+local ViewInformation = Main.ViewInformation
 
 local ProfileFrame = ServerListObjects:FindFirstChild('ProfileFrame')
 local Clone = UIObjects:FindFirstChild('Clone')
@@ -78,6 +79,9 @@ local Settings_Execute = {
 	ColorCorrection = {
 		Contrast = 1,
 		TintColor = Color3.fromRGB(80, 80, 80),
+	},
+	Camera = {
+		FieldOfView = 40
 	}
 }
 local Settings_Reset = {
@@ -87,6 +91,9 @@ local Settings_Reset = {
 	ColorCorrection = {
 		Contrast = 0,
 		TintColor = Color3.fromRGB(255, 255, 255),
+	},
+	Camera = {
+		FieldOfView = 70
 	}
 }
 local IsKeybindSelectionEnabled = false
@@ -108,6 +115,8 @@ local Months = {
 local Booleans = {
 	HighlightActive = false,
 	NotificationActive = false,
+	FOV_Zoom = false,
+	Viewing = false,
 }
 
 local Colors = {
@@ -197,13 +206,19 @@ function ESP:CreateOutlineForAll()
 			ESP:AddOutline(v.Character)
 			ESP:AddNameTag(v.Character)
 		end
-		
+
 		v.CharacterAdded:Connect(function(Character)
 			if (Booleans.HighlightActive) then
 				ESP:AddOutline(Character)
 				ESP:AddNameTag(Character)
 			end
 		end)
+	end
+end
+
+function Functions:FindObject(From, Child)
+	if (From:FindFirstChild(Child)) then
+		return From:FindFirstChild(Child)
 	end
 end
 
@@ -220,20 +235,20 @@ function Functions:Tween(Object, Time, EasingDirection, EasingStyle, Properties,
 		),
 		Properties
 	)
-	
+
 	if (typeof(Play) == 'boolean' and Play == true) then
 		Create:Play()
 	else
 		return Create
 	end
-	
+
 	if (typeof(Callback) == 'function') then
 		return Create.Completed:Connect(Callback)
 	end
 end
 
 function Functions:RippleEffect(Button)
-	
+
 	local function Ripple()
 		local X, Y = GetMouse.X, GetMouse.Y
 
@@ -265,9 +280,9 @@ function Functions:RippleEffect(Button)
 
 		end))
 	end
-	
+
 	Button.MouseButton1Down:Connect(Ripple)
-	
+
 end
 
 function Functions.ChangeIcon(Icon, Image)
@@ -275,27 +290,34 @@ function Functions.ChangeIcon(Icon, Image)
 end
 
 function Functions.ColorizeButton(Type, io)
-	
+
 	local Object = io.Object
 	local BackgroundIcon = Object.BackgroundIcon
 	local Icon = BackgroundIcon.Icon
 	local Header = Object.Header
 	local Enabled = Object.Enabled
 	local UIStroke = Object.UIStroke
-	
+
+	local Information = Object.Information
+	local InformationUIStroke = Information.UIStroke
+	local InformationIcon = Information.Icon
+
 	if (Type == "Light") then
 		local SelectedColors = Colors[Type]
-		
+
 		Enabled.Text = "On"
-		
+
 		Functions:Tween(Object, 1, 'Out', 'Quad', {BackgroundTransparency = 0}, true)
 		Functions:Tween(UIStroke, 1, 'Out', 'Quad', {Color = SelectedColors.Accent}, true)
 		Functions:Tween(Header, 1, 'Out', 'Quad', {TextColor3 = SelectedColors.Primary}, true)
 		Functions:Tween(Enabled, 1, 'Out', 'Quad', {TextColor3 = SelectedColors.Accent}, true)
 		Functions:Tween(Icon, 1, 'Out', 'Quad', {ImageColor3 = SelectedColors.Primary}, true)
+
+		Functions:Tween(InformationUIStroke, 1, 'Out', 'Quad', {Color = SelectedColors.Accent}, true)
+		Functions:Tween(InformationIcon, 1, 'Out', 'Quad', {ImageColor3 = SelectedColors.Primary}, true)
 	elseif (Type == "Transparent") then
 		local SelectedColors = Colors[Type]
-		
+
 		Enabled.Text = "Off"
 
 		Functions:Tween(Object, 1, 'Out', 'Quad', {BackgroundTransparency = 1}, true)
@@ -303,12 +325,15 @@ function Functions.ColorizeButton(Type, io)
 		Functions:Tween(Header, 1, 'Out', 'Quad', {TextColor3 = SelectedColors.Primary}, true)
 		Functions:Tween(Enabled, 1, 'Out', 'Quad', {TextColor3 = SelectedColors.Accent}, true)
 		Functions:Tween(Icon, 1, 'Out', 'Quad', {ImageColor3 = SelectedColors.Primary}, true)
+
+		Functions:Tween(InformationUIStroke, 1, 'Out', 'Quad', {Color = SelectedColors.Accent}, true)
+		Functions:Tween(InformationIcon, 1, 'Out', 'Quad', {ImageColor3 = SelectedColors.Primary}, true)
 	end
 end
 
 function Functions:SetFrameEnabled(Bool)
 	if (Bool == true) then
-		
+
 		Functions:Tween(Main, 0.6, 'Out', 'Quart', {Position = UDim2.new(0.5, 0,0.5, 0)}, true)
 		Functions:Tween(NewBlurEffect, 0.8, 'Out', 'Quad', Settings_Execute.BlurEffect, true)
 		Functions:Tween(NewColorCorrectionEffect, 0.8, 'Out', 'Quad', Settings_Execute.ColorCorrection, true)
@@ -327,7 +352,7 @@ function Functions:SetTransparent(io)
 		local Header = Object.Header
 		local Enabled = Object.Enabled
 		local UIStroke = Object.UIStroke
-		
+
 		Functions:Tween(Object, 1, 'Out', 'Quad', {BackgroundTransparency = 1}, true)
 		Functions:Tween(UIStroke, 1, 'Out', 'Quad', {Transparency = 1}, true)
 		Functions:Tween(Header, 1, 'Out', 'Quad', {TextTransparency = 1}, true)
@@ -340,13 +365,13 @@ function Functions:SetTransparent(io)
 		local Header = Object.Header
 		local Enabled = Object.Enabled
 		local UIStroke = Object.UIStroke
-		
+
 		if (io.IsNotTransparent) then
 			Functions:Tween(Object, 1, 'Out', 'Quad', {BackgroundTransparency = 0}, true)
 		else
 			Functions:Tween(Object, 1, 'Out', 'Quad', {BackgroundTransparency = 1}, true)
 		end
-		
+
 		Functions:Tween(UIStroke, 1, 'Out', 'Quad', {Transparency = 0}, true)
 		Functions:Tween(Header, 1, 'Out', 'Quad', {TextTransparency = 0}, true)
 		Functions:Tween(Enabled, 1, 'Out', 'Quad', {TextTransparency = 0}, true)
@@ -360,21 +385,61 @@ function Functions:SetVisibleObject(Object, Boolean)
 	local Header = Object.Header
 	local Enabled = Object.Enabled
 	local UIStroke = Object.UIStroke
-	
+	local Information = Object.Information
+	local InformationUIStroke = Information.UIStroke
+	local InformationIcon = Information.Icon
+
 	if (Boolean == true) then
-		
+
 		Functions:Tween(UIStroke, 0.6, 'Out', 'Quad', {Transparency = 0}, true)
 		Functions:Tween(Header, 0.6, 'Out', 'Quad', {TextTransparency = 0}, true)
 		Functions:Tween(Enabled, 0.6, 'Out', 'Quad', {TextTransparency = 0}, true)
 		Functions:Tween(IconObject, 0.6, 'Out', 'Quad', {ImageTransparency = 0}, true)
-		
+		Functions:Tween(InformationUIStroke, 1, 'Out', 'Quad', {Transparency = 0.2}, true)
+		Functions:Tween(InformationIcon, 1, 'Out', 'Quad', {ImageTransparency = 0}, true)
 	else
-		
+
 		Functions:Tween(UIStroke, 0.6, 'Out', 'Quad', {Transparency = 1}, true)
 		Functions:Tween(Header, 0.6, 'Out', 'Quad', {TextTransparency = 1}, true)
 		Functions:Tween(Enabled, 0.6, 'Out', 'Quad', {TextTransparency = 1}, true)
 		Functions:Tween(IconObject, 0.6, 'Out', 'Quad', {ImageTransparency = 1}, true)
+		Functions:Tween(InformationUIStroke, 1, 'Out', 'Quad', {Transparency = 1}, true)
+		Functions:Tween(InformationIcon, 1, 'Out', 'Quad', {ImageTransparency = 1}, true)
 	end
+end
+
+function Functions:FOVZoom(io)
+	if (io == 'Reset') then
+		local CurrentCamera = Functions:FindObject(workspace, 'Camera')
+		Functions:Tween(CurrentCamera, 0.4, 'In', 'Sine', Settings_Reset.Camera, true)
+	elseif (io == 'Execute') then
+		local CurrentCamera = Functions:FindObject(workspace, 'Camera')
+		Functions:Tween(CurrentCamera, 0.6, 'Out', 'Quart', Settings_Execute.Camera, true)
+	end
+end
+
+function Functions:ViewInformation(Name, io)
+	if (io.About) then
+		local About = io.About
+		Booleans.Viewing = true
+
+		local Header = ViewInformation.Header
+		local Object = ViewInformation.Object
+		local Description = ViewInformation.Description
+
+		Header.Text = Name
+		Object.Text = "Purpose <font size='14' color='rgb(255, 255, 255)'>["..About.Purpose:upper().."]</font>"
+		Description.Text = About.Description
+
+		Functions:Tween(ViewInformation, 0.6, 'Out', 'Quart', {Position = UDim2.new(0.01, 0,0.985, 0)}, true)
+		Functions:Tween(Grids, 0.9, 'In', 'Sine', {Position = UDim2.new(-5, 0,1, 0)}, true)
+	end
+end
+
+function Functions:UnviewInformation()
+	Booleans.Viewing = false
+	Functions:Tween(ViewInformation, 0.9, 'In', 'Sine', {Position = UDim2.new(-5, 0,0.985, 0)}, true)
+	Functions:Tween(Grids, 0.6, 'Out', 'Quart', {Position = UDim2.new(0, 0,1, 0)}, true)
 end
 
 local GridsButton = {
@@ -389,7 +454,11 @@ local GridsButton = {
 			end
 		end,
 		Enabled = false,
-		Icon = "rbxassetid://11541250125"
+		Icon = "rbxassetid://11541250125",
+		About = {
+			Description = [[<font size='20'>"</font>Allows you to view the player list of the server.<font size='20'>"</font>]],
+			Purpose = "Players",
+		}
 	},
 	['CoreGui'] = {
 		Function = function(io)
@@ -402,7 +471,11 @@ local GridsButton = {
 			end
 		end,
 		Enabled = false,
-		Icon = "rbxassetid://11541596493"
+		Icon = "rbxassetid://11541596493",
+		About = {
+			Description = [[<font size='20'>"</font>An option to Disable/Enable Roblox CoreGui.<font size='20'>"</font>]],
+			Purpose = "CoreGui",
+		}
 	},
 	['ESP Highlight'] = {
 		Function = function(io)
@@ -417,7 +490,11 @@ local GridsButton = {
 			end
 		end,
 		Enabled = false,
-		Icon = "rbxassetid://11541306028"
+		Icon = "rbxassetid://11541306028",
+		About = {
+			Description = [[<font size='20'>"</font>The ability to see through players with a highlight instance added inside their characters.<font size='20'>"</font>]],
+			Purpose = "Extrasensory Perception",
+		}
 	},
 	['Notification'] = {
 		Function = function(io)
@@ -430,11 +507,14 @@ local GridsButton = {
 			end
 		end,
 		Enabled = false,
-		Icon = "rbxassetid://11541032086"
+		Icon = "rbxassetid://11541032086",
+		About = {
+			Description = [[<font size='20'>"</font>Notifies you whether a player joined or left the server.<font size='20'>"</font>]],
+			Purpose = "Players",
+		}
 	},
 	['Daytime'] = {
 		Function = function(io)
-			
 			if (io.IsEnabled == true) then
 				Functions.ColorizeButton("Light", io)
 				Functions:Tween(Services.Lighting, 1, 'Out', 'Quart', {ClockTime = 14}, true)
@@ -448,7 +528,30 @@ local GridsButton = {
 			end
 		end,
 		Enabled = false,
-		Icon = "rbxassetid://11545717538"
+		Icon = "rbxassetid://11545717538",
+		About = {
+			Description = [[<font size='20'>"</font>Switches daytime to Day/Night.<font size='20'>"</font>]],
+			Purpose = "Lighting",
+		}
+	},
+	['FOV Zoom'] = {
+		Function = function(io)
+			if (io.IsEnabled == true) then
+				Functions.ColorizeButton("Light", io)
+				Booleans.FOV_Zoom = true
+				Functions:FOVZoom('Execute')
+			else
+				Functions.ColorizeButton("Transparent", io)
+				Booleans.FOV_Zoom = false
+				Functions:FOVZoom('Reset')
+			end
+		end,
+		Enabled = false,
+		Icon = "rbxassetid://11563777012",
+		About = {
+			Description = [[<font size='20'>"</font>Zooms camera whenever the user-interface is opened once.<font size='20'>"</font>]],
+			Purpose = "Camera",
+		}
 	},
 }
 
@@ -456,29 +559,33 @@ function Functions:Minimize()
 	if (Keybinds.Minimize.Enabled == false) then
 		Keybinds.Minimize.Enabled = true
 		Functions:SetFrameEnabled(true)
+		if (Booleans.FOV_Zoom) then
+			Functions:FOVZoom('Execute')
+		end
 	elseif (Keybinds.Minimize.Enabled == true) then
 		Keybinds.Minimize.Enabled = false
 		Functions:SetFrameEnabled(false)
+		Functions:FOVZoom('Reset')
 	end
 end
 
 function Functions:SetupUserInput()
-	
+
 	local Bubble = Minimize.Bubble
 	local Key = Bubble.Key
-	
+
 	local Expand = ScreenGui.Expand
 	local Keybind = UserInterfaceKeybind.Keybind
 	local Current_KeyCode = Keybinds.Minimize.KeyCode.Name
 	Key.Text = Current_KeyCode
 	Keybind.Text = Current_KeyCode
-	
+
 	RBXScriptConnections.UserInputEvent = Services.UserInputService.InputBegan:Connect(function(Input, GameProcessedEvent)
 		if (Input.KeyCode == Keybinds.Minimize.KeyCode and not GameProcessedEvent and IsKeybindSelectionEnabled ~= true) then
 			Functions:Minimize()
 		end
 		if (IsKeybindSelectionEnabled) then
-			if (Input.KeyCode and not GameProcessedEvent) then
+			if (Input.KeyCode ~= Enum.KeyCode.Unknown and not GameProcessedEvent) then
 				if (Input.KeyCode.Name ~= Current_KeyCode) then
 					Keybind.Text = tostring(Input.KeyCode.Name)
 					Keybinds.Minimize.KeyCode = Input.KeyCode
@@ -491,21 +598,21 @@ function Functions:SetupUserInput()
 			end
 		end
 	end)
-	
+
 	Keybind.MouseButton1Click:Connect(function()
 		if (not IsKeybindSelectionEnabled) then
 			IsKeybindSelectionEnabled = true
 			Keybind.Text = "..."
 		end
 	end)
-	
+
 	Expand.MouseButton1Click:Connect(function()
 		if (Keybinds.Minimize.Enabled == false) then
 			Keybinds.Minimize.Enabled = true
 			Functions:SetFrameEnabled(true)
 		end
 	end)
-	
+
 	Minimize.MouseButton1Click:Connect(function()
 		Functions:Minimize()
 		Functions:RippleEffect(Minimize)
@@ -513,38 +620,46 @@ function Functions:SetupUserInput()
 end
 
 function Functions:Setup()
-	
+
 	local DateToday = DateAndTime.DateToday
 	local Time = DateAndTime.Time
-	
+
 	local Bubble = Minimize.Bubble
 	local Key = Bubble.Key
 	local MinimizeUIStroke = Minimize.UIStroke
 	local MinimizeIcon = Minimize.Icon
-	
+
 	local Expand = ScreenGui.Expand
 	local ExpandUIStroke = Expand.UIStroke
 	local ExpandIcon = Expand.Icon
-	
+
 	local Keybind = UserInterfaceKeybind.Keybind
 	local UserInterfaceKeybindHeader = UserInterfaceKeybind.Header
 	local UserInterfaceKeybindBottom = UserInterfaceKeybind.Bottom
 	local UserInterfaceKeybinedStroke = UserInterfaceKeybind.UIStroke
 	local KeybindStroke = Keybind.UIStroke
-	
+
+	local Back = ViewInformation.Back
+
+	Back.MouseButton1Click:Connect(function()
+		if (Booleans.Viewing) then
+			Functions:UnviewInformation()
+		end
+	end)
+
 	Main:GetPropertyChangedSignal('Position'):Connect(function()
 		if (Main.Position ~= UDim2.new(0.5, 0, 0.5, 0)) then
 			Functions:Tween(ExpandUIStroke, 0.6, 'Out', 'Quart', {Transparency = 0}, true)
 			Functions:Tween(ExpandIcon, 0.6, 'Out', 'Quart', {ImageTransparency = 0}, true)
 			Functions:Tween(Expand, 0.6, 'Out', 'Quart', {Position = UDim2.new(0.976, 0,0.96, 0)}, true)
-			
+
 			Functions:Tween(DateToday, 0.6, 'Out', 'Quart', {TextTransparency = 1}, true)
 			Functions:Tween(Time, 0.6, 'Out', 'Quart', {TextTransparency = 1}, true)
 			Functions:Tween(Bubble, 0.6, 'Out', 'Quart', {ImageTransparency = 1}, true)
 			Functions:Tween(Key, 0.6, 'Out', 'Quart', {TextTransparency = 1}, true)
 			Functions:Tween(MinimizeUIStroke, 0.6, 'Out', 'Quart', {Transparency = 1}, true)
 			Functions:Tween(MinimizeIcon, 0.6, 'Out', 'Quart', {ImageTransparency = 1}, true)
-			
+
 			Functions:Tween(KeybindStroke, 0.6, 'Out', 'Quart', {Transparency = 1}, true)
 			Functions:Tween(Keybind, 0.6, 'Out', 'Quart', {TextTransparency = 1}, true)
 			Functions:Tween(UserInterfaceKeybinedStroke, 0.6, 'Out', 'Quart', {Transparency = 1}, true)
@@ -554,14 +669,14 @@ function Functions:Setup()
 			Functions:Tween(ExpandUIStroke, 0.6, 'Out', 'Quart', {Transparency = 1}, true)
 			Functions:Tween(ExpandIcon, 0.6, 'Out', 'Quart', {ImageTransparency = 1}, true)
 			Functions:Tween(Expand, 0.6, 'Out', 'Quart', {Position = UDim2.new(0.976, 0,5, 0)}, true)
-			
+
 			Functions:Tween(DateToday, 0.6, 'Out', 'Quart', {TextTransparency = 0}, true)
 			Functions:Tween(Time, 0.6, 'Out', 'Quart', {TextTransparency = 0}, true)
 			Functions:Tween(Bubble, 0.6, 'Out', 'Quart', {ImageTransparency = 0}, true)
 			Functions:Tween(Key, 0.6, 'Out', 'Quart', {TextTransparency = 0}, true)
 			Functions:Tween(MinimizeUIStroke, 0.6, 'Out', 'Quart', {Transparency = 0}, true)
 			Functions:Tween(MinimizeIcon, 0.6, 'Out', 'Quart', {ImageTransparency = 0}, true)
-			
+
 			Functions:Tween(KeybindStroke, 0.6, 'Out', 'Quart', {Transparency = 0}, true)
 			Functions:Tween(Keybind, 0.6, 'Out', 'Quart', {TextTransparency = 0}, true)
 			Functions:Tween(UserInterfaceKeybinedStroke, 0.6, 'Out', 'Quart', {Transparency = 0}, true)
@@ -569,35 +684,36 @@ function Functions:Setup()
 			Functions:Tween(UserInterfaceKeybindBottom, 0.6, 'Out', 'Quart', {TextTransparency = 0}, true)
 		end
 	end)
-	
+
 	for Name, Buttons in pairs(GridsButton) do
-		
+
 		local Cloned = Clone:Clone()
 		local Header = Cloned.Header
 		local EnabledText = Cloned.Enabled
 		local BackgroundIcon = Cloned.BackgroundIcon
 		local IconImage = BackgroundIcon.Icon
-		
+		local Information = Cloned.Information
+
 		local ChangedPropertyEvent
-		
+
 		Cloned.Visible = true
 		Cloned.Parent = Grids
 		Cloned.Name = Name
-		
+
 		IconImage.Image = Buttons.Icon
 		Header.Text = Name
-		
+
 		if (Buttons.Enabled ~= nil) then
-			
+
 			if (Buttons.Enabled == false) then
 				EnabledText.Text = "Off"
 			else
 				EnabledText.Text = "On"
 			end
-			
+
 			if (Name == "CoreGui") then
 				local Bool = Services.StarterGui:GetCoreGuiEnabled(Enum.CoreGuiType.All)
-				
+
 				Buttons.Enabled = Bool
 				Buttons.Function({
 					IsEnabled = Bool;
@@ -605,7 +721,7 @@ function Functions:Setup()
 					ImageIcon = IconImage;
 				})
 			end
-			
+
 			if (Name == "Daytime") then
 				if (Services.Lighting:GetMinutesAfterMidnight() >= 870) then
 					Buttons.Function({
@@ -621,7 +737,13 @@ function Functions:Setup()
 					})
 				end
 			end
-			
+
+			Information.MouseButton1Click:Connect(function()
+				if (not Booleans.Viewing) then
+					Functions:ViewInformation(Name, Buttons)
+				end
+			end)
+
 			ChangedPropertyEvent = Main:GetPropertyChangedSignal('Position'):Connect(function()
 				if (Main.Position ~= UDim2.new(0.5, 0, 0.5, 0)) then
 					Functions:SetVisibleObject(
@@ -635,11 +757,11 @@ function Functions:Setup()
 					)
 				end
 			end)
-			
+
 			Cloned.MouseButton1Click:Connect(function()
-				
+
 				Functions:RippleEffect(Cloned)
-				
+
 				if (Buttons.Enabled == false) then
 					Buttons.Enabled = true
 					Buttons.Function({
@@ -656,7 +778,7 @@ function Functions:Setup()
 					})
 				end
 			end)
-			
+
 			Cloned.AncestryChanged:Connect(function(Child, Parent)
 				if (Child == Cloned and Parent == nil) then
 					if (ChangedPropertyEvent) then
@@ -666,22 +788,22 @@ function Functions:Setup()
 			end)
 		end
 	end
-	
+
 	for _, Player in pairs(Services.Players:GetPlayers()) do
 		spawn(function()
 			Functions:AddToList(Player)
 		end)
 	end
-	
+
 	Functions:Tween(Expand, 0.6, 'Out', 'Quart', {Position = UDim2.new(0.976, 0,0.96, 0)}, true)
 end
 
 function Functions:AddToList(Player)
-	
+
 	if (ServerList.List:FindFirstChild(Player.UserId)) then
 		return
 	end
-	
+
 	local Cloned = ProfileFrame:Clone()
 	Cloned.Parent = ServerList.List
 	Cloned.Visible = true
@@ -711,7 +833,7 @@ function Functions:AddToList(Player)
 		TeleportButton.MouseButton1Click:Connect(function()
 			Humanoid:TeleportUserTo(LocalPlayer.Character, Player.Character)
 		end)
-		
+
 		if (Player:IsFriendsWith(LocalPlayer.UserId)) then
 			Username.Text = (Player.Name.." (Friends)")
 			if (Booleans.NotificationActive) then
