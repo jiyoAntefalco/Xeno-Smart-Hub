@@ -1,0 +1,797 @@
+repeat wait(1) until game.Players.LocalPlayer.Character
+
+local CoreGui = game:GetService('CoreGui')
+local Asset = {
+	['Xeno'] = "rbxassetid://11562172160",
+}
+
+local ScreenGui = nil
+
+local Success, Return = pcall(function()
+	return game:GetObjects(Asset.Xeno)[1]
+end)
+
+if (Success) then
+	ScreenGui = Return
+	if (ScreenGui) then
+		ScreenGui.Parent = CoreGui
+	end
+else
+	if (not ScreenGui) then
+		return
+	end
+end
+
+local Main = ScreenGui.Main
+local Grids = Main.Grids
+local UIObjects = Grids.Objects
+local RippleEffects = Main.RippleEffects
+local LightingEffects = Main.LightingEffects
+local DateAndTime = Main.DateAndTime
+local Minimize = Main.Minimize
+local ServerList = Main.ServerList
+local ServerListObjects = ServerList.Objects
+local ServerListHeader = ServerList.Header
+local UserInterfaceKeybind = Main.UserInterfaceKeybind
+
+local ProfileFrame = ServerListObjects:FindFirstChild('ProfileFrame')
+local Clone = UIObjects:FindFirstChild('Clone')
+local Circle = RippleEffects:FindFirstChild('Circle')
+
+local Services = {
+	StarterGui = game:GetService('StarterGui');
+	Players = game:GetService('Players');
+	TweenService = game:GetService('TweenService');
+	UserInputService = game:GetService('UserInputService');
+	Lighting = game:GetService('Lighting');
+	RunService = game:GetService('RunService');
+	Debris = game:GetService('Debris');
+	GuiService = game:GetService('GuiService');
+}
+
+local LocalPlayer = Services.Players.LocalPlayer
+local GetMouse = LocalPlayer:GetMouse()
+
+local NewBlurEffect, NewColorCorrectionEffect = LightingEffects.Blur:Clone(), LightingEffects.ColorCorrection:Clone()
+NewBlurEffect.Name = 'UIBlur_'
+NewBlurEffect.Parent = Services.Lighting
+NewColorCorrectionEffect.Name = 'UIColorCorrection_'
+NewColorCorrectionEffect.Parent = Services.Lighting
+
+local Folder = Instance.new('Folder', Services.StarterGui)
+
+local Functions = {}
+local Keybinds = {
+	["Minimize"] = {
+		KeyCode = Enum.KeyCode.Z,
+		Enabled = false,
+	}
+}
+local ESP = {}
+local RBXScriptConnections = {}
+local Humanoid = {}
+local Settings_Execute = {
+	BlurEffect = {
+		Size = 20,
+	},
+	ColorCorrection = {
+		Contrast = 1,
+		TintColor = Color3.fromRGB(80, 80, 80),
+	}
+}
+local Settings_Reset = {
+	BlurEffect = {
+		Size = 0,
+	},
+	ColorCorrection = {
+		Contrast = 0,
+		TintColor = Color3.fromRGB(255, 255, 255),
+	}
+}
+local IsKeybindSelectionEnabled = false
+local Months = {
+	[1] = "Jan",
+	[2] = "Feb",
+	[3] = "Mar",
+	[4] = "Apr",
+	[5] = "May",
+	[6] = "Jun",
+	[7] = "July",
+	[8] = "August",
+	[9] = "Sept",
+	[10] = "Oct",
+	[11] = "Nov",
+	[12] = "Dec",
+}
+
+local Booleans = {
+	HighlightActive = false,
+	NotificationActive = false,
+}
+
+local Colors = {
+	Transparent = {
+		Accent = Color3.fromRGB(170, 170, 170),
+		Primary = Color3.fromRGB(255, 255, 255),
+	},
+	Light = {
+		Accent = Color3.fromRGB(22, 22, 22),
+		Primary = Color3.fromRGB(33, 33, 33)
+	}
+}
+
+function Functions:Time()
+	local HOUR = math.floor((tick() % 86400) / 3600)
+	local MINUTE = math.floor((tick() % 3600) / 60)
+	local SECOND = math.floor(tick() % 60)
+	local AP = HOUR > 11 and 'PM' or 'AM'
+	HOUR = (HOUR % 12 == 0 and 12 or HOUR % 12)
+	HOUR = HOUR < 10 and HOUR
+	MINUTE = MINUTE < 10 and '0' .. MINUTE or MINUTE
+	SECOND = SECOND < 10 and '0' .. SECOND or SECOND
+	return HOUR .. ':' .. MINUTE
+end
+
+function ESP:AddOutline(Character, OutlineFill)
+	local OutlineFill = OutlineFill or false;
+	local Highlight = Instance.new("Highlight", Folder)
+
+	Highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+	Highlight.Adornee = Character
+
+	if OutlineFill == true then
+		Highlight.FillColor = Color3.fromRGB(255, 255, 255)
+		Highlight.FillTransparency = 1
+	else
+		Highlight.FillTransparency = 1
+	end
+end
+
+function ESP:AddAIOutline(Character, OutlineFill)
+	local OutlineFill = OutlineFill or false;
+	local Highlight = Instance.new("Highlight", Folder)
+
+	Highlight.OutlineColor = Color3.fromRGB(255, 0, 0)
+	Highlight.Adornee = Character
+
+	if OutlineFill then
+		Highlight.FillColor = Color3.fromRGB(255, 0, 0)
+		Highlight.FillTransparency = 0
+	else
+		Highlight.FillTransparency = 1
+	end
+end
+
+function ESP:AddNameTag(Character)
+	local BGui = Instance.new("BillboardGui", Folder)
+	local Frame = Instance.new("Frame", BGui)
+	local TextLabel = Instance.new("TextLabel", Frame)
+
+	BGui.Adornee = Character:WaitForChild("Head")
+	BGui.StudsOffset = Vector3.new(0, 3, 0)
+	BGui.AlwaysOnTop = true
+
+	BGui.Size = UDim2.new(4, 0, 0.5, 0)
+	Frame.Size = UDim2.new(1, 0, 1, 0)
+	TextLabel.Size = UDim2.new(1, 0, 1, 0)
+
+	Frame.BackgroundTransparency = 1
+	TextLabel.BackgroundTransparency = 1
+
+	TextLabel.Text = Character.Name
+	TextLabel.Font = Enum.Font.RobotoMono
+	TextLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+	TextLabel.TextScaled = false
+end
+
+function ESP:ClearOutlines()
+	for i,v in pairs(Folder:GetChildren()) do
+		v:Destroy();
+	end
+end
+
+function ESP:CreateOutlineForAll()
+	for _, v in pairs(Services.Players:GetPlayers()) do
+		if (v.Character) then
+			ESP:AddOutline(v.Character)
+			ESP:AddNameTag(v.Character)
+		end
+		
+		v.CharacterAdded:Connect(function(Character)
+			if (Booleans.HighlightActive) then
+				ESP:AddOutline(Character)
+				ESP:AddNameTag(Character)
+			end
+		end)
+	end
+end
+
+function Functions:Tween(Object, Time, EasingDirection, EasingStyle, Properties, Play, Callback)
+	local Create = Services.TweenService:Create(
+		Object,
+		TweenInfo.new(
+			Time,
+			Enum.EasingStyle[EasingStyle],
+			Enum.EasingDirection[EasingDirection],
+			0,
+			false,
+			0
+		),
+		Properties
+	)
+	
+	if (typeof(Play) == 'boolean' and Play == true) then
+		Create:Play()
+	else
+		return Create
+	end
+	
+	if (typeof(Callback) == 'function') then
+		return Create.Completed:Connect(Callback)
+	end
+end
+
+function Functions:RippleEffect(Button)
+	
+	local function Ripple()
+		local X, Y = GetMouse.X, GetMouse.Y
+
+		coroutine.resume(coroutine.create(function()
+
+			Button.ClipsDescendants = true
+
+			local CircleCloned = Circle:Clone()
+			CircleCloned.Parent = Button
+			local NewX = X - CircleCloned.AbsolutePosition.X
+			local NewY = Y - CircleCloned.AbsolutePosition.Y
+			CircleCloned.Position = UDim2.new(0, NewX, 0, NewY)
+
+			local Size = 0
+			if Button.AbsoluteSize.X > Button.AbsoluteSize.Y then
+				Size = Button.AbsoluteSize.X*1.5
+			elseif Button.AbsoluteSize.X < Button.AbsoluteSize.Y then
+				Size = Button.AbsoluteSize.Y*1.5
+			elseif Button.AbsoluteSize.X == Button.AbsoluteSize.Y then																										Size = Button.AbsoluteSize.X*1.5
+			end
+
+			local Time = 0.5
+			CircleCloned:TweenSizeAndPosition(UDim2.new(0, Size, 0, Size), UDim2.new(0.5, -Size/2, 0.5, -Size/2), "Out", "Quad", Time, false, nil)
+			for i=1,10 do
+				CircleCloned.ImageTransparency = CircleCloned.ImageTransparency + 0.01
+				wait(Time/10)
+			end
+			CircleCloned:Destroy()
+
+		end))
+	end
+	
+	Button.MouseButton1Down:Connect(Ripple)
+	
+end
+
+function Functions.ChangeIcon(Icon, Image)
+	Icon.Image = Image
+end
+
+function Functions.ColorizeButton(Type, io)
+	
+	local Object = io.Object
+	local BackgroundIcon = Object.BackgroundIcon
+	local Icon = BackgroundIcon.Icon
+	local Header = Object.Header
+	local Enabled = Object.Enabled
+	local UIStroke = Object.UIStroke
+	
+	if (Type == "Light") then
+		local SelectedColors = Colors[Type]
+		
+		Enabled.Text = "On"
+		
+		Functions:Tween(Object, 1, 'Out', 'Quad', {BackgroundTransparency = 0}, true)
+		Functions:Tween(UIStroke, 1, 'Out', 'Quad', {Color = SelectedColors.Accent}, true)
+		Functions:Tween(Header, 1, 'Out', 'Quad', {TextColor3 = SelectedColors.Primary}, true)
+		Functions:Tween(Enabled, 1, 'Out', 'Quad', {TextColor3 = SelectedColors.Accent}, true)
+		Functions:Tween(Icon, 1, 'Out', 'Quad', {ImageColor3 = SelectedColors.Primary}, true)
+	elseif (Type == "Transparent") then
+		local SelectedColors = Colors[Type]
+		
+		Enabled.Text = "Off"
+
+		Functions:Tween(Object, 1, 'Out', 'Quad', {BackgroundTransparency = 1}, true)
+		Functions:Tween(UIStroke, 1, 'Out', 'Quad', {Color = SelectedColors.Accent}, true)
+		Functions:Tween(Header, 1, 'Out', 'Quad', {TextColor3 = SelectedColors.Primary}, true)
+		Functions:Tween(Enabled, 1, 'Out', 'Quad', {TextColor3 = SelectedColors.Accent}, true)
+		Functions:Tween(Icon, 1, 'Out', 'Quad', {ImageColor3 = SelectedColors.Primary}, true)
+	end
+end
+
+function Functions:SetFrameEnabled(Bool)
+	if (Bool == true) then
+		
+		Functions:Tween(Main, 0.6, 'Out', 'Quart', {Position = UDim2.new(0.5, 0,0.5, 0)}, true)
+		Functions:Tween(NewBlurEffect, 0.8, 'Out', 'Quad', Settings_Execute.BlurEffect, true)
+		Functions:Tween(NewColorCorrectionEffect, 0.8, 'Out', 'Quad', Settings_Execute.ColorCorrection, true)
+	else
+		Functions:Tween(Main, 0.9, 'In', 'Sine', {Position = UDim2.new(0.5, 0,5, 0)}, true)
+		Functions:Tween(NewBlurEffect, 0.8, 'Out', 'Quad', Settings_Reset.BlurEffect, true)
+		Functions:Tween(NewColorCorrectionEffect, 0.8, 'Out', 'Quad', Settings_Reset.ColorCorrection, true)
+	end
+end
+
+function Functions:SetTransparent(io)
+	if (io.Visible == false) then
+		local Object = io.Object
+		local BackgroundIcon = Object.BackgroundIcon
+		local Icon = BackgroundIcon.Icon
+		local Header = Object.Header
+		local Enabled = Object.Enabled
+		local UIStroke = Object.UIStroke
+		
+		Functions:Tween(Object, 1, 'Out', 'Quad', {BackgroundTransparency = 1}, true)
+		Functions:Tween(UIStroke, 1, 'Out', 'Quad', {Transparency = 1}, true)
+		Functions:Tween(Header, 1, 'Out', 'Quad', {TextTransparency = 1}, true)
+		Functions:Tween(Enabled, 1, 'Out', 'Quad', {TextTransparency = 1}, true)
+		Functions:Tween(Icon, 1, 'Out', 'Quad', {ImageTransparency = 1}, true)
+	else
+		local Object = io.Object
+		local BackgroundIcon = Object.BackgroundIcon
+		local Icon = BackgroundIcon.Icon
+		local Header = Object.Header
+		local Enabled = Object.Enabled
+		local UIStroke = Object.UIStroke
+		
+		if (io.IsNotTransparent) then
+			Functions:Tween(Object, 1, 'Out', 'Quad', {BackgroundTransparency = 0}, true)
+		else
+			Functions:Tween(Object, 1, 'Out', 'Quad', {BackgroundTransparency = 1}, true)
+		end
+		
+		Functions:Tween(UIStroke, 1, 'Out', 'Quad', {Transparency = 0}, true)
+		Functions:Tween(Header, 1, 'Out', 'Quad', {TextTransparency = 0}, true)
+		Functions:Tween(Enabled, 1, 'Out', 'Quad', {TextTransparency = 0}, true)
+		Functions:Tween(Icon, 1, 'Out', 'Quad', {ImageTransparency = 0}, true)
+	end
+end
+
+function Functions:SetVisibleObject(Object, Boolean)
+	local BackgroundIcon = Object.BackgroundIcon
+	local IconObject = BackgroundIcon.Icon
+	local Header = Object.Header
+	local Enabled = Object.Enabled
+	local UIStroke = Object.UIStroke
+	
+	if (Boolean == true) then
+		
+		Functions:Tween(UIStroke, 0.6, 'Out', 'Quad', {Transparency = 0}, true)
+		Functions:Tween(Header, 0.6, 'Out', 'Quad', {TextTransparency = 0}, true)
+		Functions:Tween(Enabled, 0.6, 'Out', 'Quad', {TextTransparency = 0}, true)
+		Functions:Tween(IconObject, 0.6, 'Out', 'Quad', {ImageTransparency = 0}, true)
+		
+	else
+		
+		Functions:Tween(UIStroke, 0.6, 'Out', 'Quad', {Transparency = 1}, true)
+		Functions:Tween(Header, 0.6, 'Out', 'Quad', {TextTransparency = 1}, true)
+		Functions:Tween(Enabled, 0.6, 'Out', 'Quad', {TextTransparency = 1}, true)
+		Functions:Tween(IconObject, 0.6, 'Out', 'Quad', {ImageTransparency = 1}, true)
+	end
+end
+
+local GridsButton = {
+	['Server'] = {
+		Function = function(io)
+			if (io.IsEnabled == true) then
+				Functions.ColorizeButton("Light", io)
+				Functions:Tween(ServerList, 0.6, 'Out', 'Quart', {Position = UDim2.new(0.98, 0,0.03, 0)}, true)
+			else
+				Functions.ColorizeButton("Transparent", io)
+				Functions:Tween(ServerList, 0.9, 'In', 'Sine', {Position = UDim2.new(0.98, 0,5, 0)}, true)
+			end
+		end,
+		Enabled = false,
+		Icon = "rbxassetid://11541250125"
+	},
+	['CoreGui'] = {
+		Function = function(io)
+			if (io.IsEnabled == true) then
+				Functions.ColorizeButton("Light", io)
+				Services.StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.All, io.IsEnabled)
+			else
+				Functions.ColorizeButton("Transparent", io)
+				Services.StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.All, io.IsEnabled)
+			end
+		end,
+		Enabled = false,
+		Icon = "rbxassetid://11541596493"
+	},
+	['ESP Highlight'] = {
+		Function = function(io)
+			if (io.IsEnabled == true) then
+				Functions.ColorizeButton("Light", io)
+				Booleans.HighlightActive = io.IsEnabled
+				ESP:CreateOutlineForAll()
+			else
+				Functions.ColorizeButton("Transparent", io)
+				Booleans.HighlightActive = io.IsEnabled
+				ESP:ClearOutlines()
+			end
+		end,
+		Enabled = false,
+		Icon = "rbxassetid://11541306028"
+	},
+	['Notification'] = {
+		Function = function(io)
+			if (io.IsEnabled == true) then
+				Functions.ColorizeButton("Light", io)
+				Booleans.NotificationActive = io.IsEnabled
+			else
+				Functions.ColorizeButton("Transparent", io)
+				Booleans.NotificationActive = io.IsEnabled
+			end
+		end,
+		Enabled = false,
+		Icon = "rbxassetid://11541032086"
+	},
+	['Daytime'] = {
+		Function = function(io)
+			
+			if (io.IsEnabled == true) then
+				Functions.ColorizeButton("Light", io)
+				Functions:Tween(Services.Lighting, 1, 'Out', 'Quart', {ClockTime = 14}, true)
+				io.Object.Enabled.Text = "Day"
+				io.ImageIcon.Image = "rbxassetid://11545717538"
+			else
+				Functions.ColorizeButton("Transparent", io)
+				Functions:Tween(Services.Lighting, 1, 'Out', 'Quart', {ClockTime = 6}, true)
+				io.Object.Enabled.Text = "Night"
+				io.ImageIcon.Image = "rbxassetid://11545720924"
+			end
+		end,
+		Enabled = false,
+		Icon = "rbxassetid://11545717538"
+	},
+}
+
+function Functions:Minimize()
+	if (Keybinds.Minimize.Enabled == false) then
+		Keybinds.Minimize.Enabled = true
+		Functions:SetFrameEnabled(true)
+	elseif (Keybinds.Minimize.Enabled == true) then
+		Keybinds.Minimize.Enabled = false
+		Functions:SetFrameEnabled(false)
+	end
+end
+
+function Functions:SetupUserInput()
+	
+	local Bubble = Minimize.Bubble
+	local Key = Bubble.Key
+	
+	local Expand = ScreenGui.Expand
+	local Keybind = UserInterfaceKeybind.Keybind
+	local Current_KeyCode = Keybinds.Minimize.KeyCode.Name
+	Key.Text = Current_KeyCode
+	Keybind.Text = Current_KeyCode
+	
+	RBXScriptConnections.UserInputEvent = Services.UserInputService.InputBegan:Connect(function(Input, GameProcessedEvent)
+		if (Input.KeyCode == Keybinds.Minimize.KeyCode and not GameProcessedEvent and IsKeybindSelectionEnabled ~= true) then
+			Functions:Minimize()
+		end
+		if (IsKeybindSelectionEnabled) then
+			if (Input.KeyCode and not GameProcessedEvent) then
+				if (Input.KeyCode.Name ~= Current_KeyCode) then
+					Keybind.Text = tostring(Input.KeyCode.Name)
+					Keybinds.Minimize.KeyCode = Input.KeyCode
+					IsKeybindSelectionEnabled = false
+				else
+					Keybind.Text = Current_KeyCode
+					Key.Text = Current_KeyCode
+					IsKeybindSelectionEnabled = false
+				end
+			end
+		end
+	end)
+	
+	Keybind.MouseButton1Click:Connect(function()
+		if (not IsKeybindSelectionEnabled) then
+			IsKeybindSelectionEnabled = true
+			Keybind.Text = "..."
+		end
+	end)
+	
+	Expand.MouseButton1Click:Connect(function()
+		if (Keybinds.Minimize.Enabled == false) then
+			Keybinds.Minimize.Enabled = true
+			Functions:SetFrameEnabled(true)
+		end
+	end)
+	
+	Minimize.MouseButton1Click:Connect(function()
+		Functions:Minimize()
+		Functions:RippleEffect(Minimize)
+	end)
+end
+
+function Functions:Setup()
+	
+	local DateToday = DateAndTime.DateToday
+	local Time = DateAndTime.Time
+	
+	local Bubble = Minimize.Bubble
+	local Key = Bubble.Key
+	local MinimizeUIStroke = Minimize.UIStroke
+	local MinimizeIcon = Minimize.Icon
+	
+	local Expand = ScreenGui.Expand
+	local ExpandUIStroke = Expand.UIStroke
+	local ExpandIcon = Expand.Icon
+	
+	local Keybind = UserInterfaceKeybind.Keybind
+	local UserInterfaceKeybindHeader = UserInterfaceKeybind.Header
+	local UserInterfaceKeybindBottom = UserInterfaceKeybind.Bottom
+	local UserInterfaceKeybinedStroke = UserInterfaceKeybind.UIStroke
+	local KeybindStroke = Keybind.UIStroke
+	
+	Main:GetPropertyChangedSignal('Position'):Connect(function()
+		if (Main.Position ~= UDim2.new(0.5, 0, 0.5, 0)) then
+			Functions:Tween(ExpandUIStroke, 0.6, 'Out', 'Quart', {Transparency = 0}, true)
+			Functions:Tween(ExpandIcon, 0.6, 'Out', 'Quart', {ImageTransparency = 0}, true)
+			Functions:Tween(Expand, 0.6, 'Out', 'Quart', {Position = UDim2.new(0.976, 0,0.96, 0)}, true)
+			
+			Functions:Tween(DateToday, 0.6, 'Out', 'Quart', {TextTransparency = 1}, true)
+			Functions:Tween(Time, 0.6, 'Out', 'Quart', {TextTransparency = 1}, true)
+			Functions:Tween(Bubble, 0.6, 'Out', 'Quart', {ImageTransparency = 1}, true)
+			Functions:Tween(Key, 0.6, 'Out', 'Quart', {TextTransparency = 1}, true)
+			Functions:Tween(MinimizeUIStroke, 0.6, 'Out', 'Quart', {Transparency = 1}, true)
+			Functions:Tween(MinimizeIcon, 0.6, 'Out', 'Quart', {ImageTransparency = 1}, true)
+			
+			Functions:Tween(KeybindStroke, 0.6, 'Out', 'Quart', {Transparency = 1}, true)
+			Functions:Tween(Keybind, 0.6, 'Out', 'Quart', {TextTransparency = 1}, true)
+			Functions:Tween(UserInterfaceKeybinedStroke, 0.6, 'Out', 'Quart', {Transparency = 1}, true)
+			Functions:Tween(UserInterfaceKeybindHeader, 0.6, 'Out', 'Quart', {TextTransparency = 1}, true)
+			Functions:Tween(UserInterfaceKeybindBottom, 0.6, 'Out', 'Quart', {TextTransparency = 1}, true)
+		else
+			Functions:Tween(ExpandUIStroke, 0.6, 'Out', 'Quart', {Transparency = 1}, true)
+			Functions:Tween(ExpandIcon, 0.6, 'Out', 'Quart', {ImageTransparency = 1}, true)
+			Functions:Tween(Expand, 0.6, 'Out', 'Quart', {Position = UDim2.new(0.976, 0,5, 0)}, true)
+			
+			Functions:Tween(DateToday, 0.6, 'Out', 'Quart', {TextTransparency = 0}, true)
+			Functions:Tween(Time, 0.6, 'Out', 'Quart', {TextTransparency = 0}, true)
+			Functions:Tween(Bubble, 0.6, 'Out', 'Quart', {ImageTransparency = 0}, true)
+			Functions:Tween(Key, 0.6, 'Out', 'Quart', {TextTransparency = 0}, true)
+			Functions:Tween(MinimizeUIStroke, 0.6, 'Out', 'Quart', {Transparency = 0}, true)
+			Functions:Tween(MinimizeIcon, 0.6, 'Out', 'Quart', {ImageTransparency = 0}, true)
+			
+			Functions:Tween(KeybindStroke, 0.6, 'Out', 'Quart', {Transparency = 0}, true)
+			Functions:Tween(Keybind, 0.6, 'Out', 'Quart', {TextTransparency = 0}, true)
+			Functions:Tween(UserInterfaceKeybinedStroke, 0.6, 'Out', 'Quart', {Transparency = 0}, true)
+			Functions:Tween(UserInterfaceKeybindHeader, 0.6, 'Out', 'Quart', {TextTransparency = 0}, true)
+			Functions:Tween(UserInterfaceKeybindBottom, 0.6, 'Out', 'Quart', {TextTransparency = 0}, true)
+		end
+	end)
+	
+	for Name, Buttons in pairs(GridsButton) do
+		
+		local Cloned = Clone:Clone()
+		local Header = Cloned.Header
+		local EnabledText = Cloned.Enabled
+		local BackgroundIcon = Cloned.BackgroundIcon
+		local IconImage = BackgroundIcon.Icon
+		
+		local ChangedPropertyEvent
+		
+		Cloned.Visible = true
+		Cloned.Parent = Grids
+		Cloned.Name = Name
+		
+		IconImage.Image = Buttons.Icon
+		Header.Text = Name
+		
+		if (Buttons.Enabled ~= nil) then
+			
+			if (Buttons.Enabled == false) then
+				EnabledText.Text = "Off"
+			else
+				EnabledText.Text = "On"
+			end
+			
+			if (Name == "CoreGui") then
+				local Bool = Services.StarterGui:GetCoreGuiEnabled(Enum.CoreGuiType.All)
+				
+				Buttons.Enabled = Bool
+				Buttons.Function({
+					IsEnabled = Bool;
+					Object = Cloned;
+					ImageIcon = IconImage;
+				})
+			end
+			
+			if (Name == "Daytime") then
+				if (Services.Lighting:GetMinutesAfterMidnight() >= 870) then
+					Buttons.Function({
+						IsEnabled = true;
+						Object = Cloned;
+						ImageIcon = IconImage;
+					})
+				else
+					Buttons.Function({
+						IsEnabled = false;
+						Object = Cloned;
+						ImageIcon = IconImage;
+					})
+				end
+			end
+			
+			ChangedPropertyEvent = Main:GetPropertyChangedSignal('Position'):Connect(function()
+				if (Main.Position ~= UDim2.new(0.5, 0, 0.5, 0)) then
+					Functions:SetVisibleObject(
+						Cloned,
+						false
+					)
+				else
+					Functions:SetVisibleObject(
+						Cloned,
+						true
+					)
+				end
+			end)
+			
+			Cloned.MouseButton1Click:Connect(function()
+				
+				Functions:RippleEffect(Cloned)
+				
+				if (Buttons.Enabled == false) then
+					Buttons.Enabled = true
+					Buttons.Function({
+						IsEnabled = Buttons.Enabled;
+						Object = Cloned;
+						ImageIcon = IconImage;
+					})
+				elseif (Buttons.Enabled == true) then
+					Buttons.Enabled = false
+					Buttons.Function({
+						IsEnabled = Buttons.Enabled;
+						Object = Cloned;
+						ImageIcon = IconImage;
+					})
+				end
+			end)
+			
+			Cloned.AncestryChanged:Connect(function(Child, Parent)
+				if (Child == Cloned and Parent == nil) then
+					if (ChangedPropertyEvent) then
+						ChangedPropertyEvent:Disconnect()
+					end
+				end
+			end)
+		end
+	end
+	
+	for _, Player in pairs(Services.Players:GetPlayers()) do
+		spawn(function()
+			Functions:AddToList(Player)
+		end)
+	end
+	
+	Functions:Tween(Expand, 0.6, 'Out', 'Quart', {Position = UDim2.new(0.976, 0,0.96, 0)}, true)
+end
+
+function Functions:AddToList(Player)
+	
+	if (ServerList.List:FindFirstChild(Player.UserId)) then
+		return
+	end
+	
+	local Cloned = ProfileFrame:Clone()
+	Cloned.Parent = ServerList.List
+	Cloned.Visible = true
+
+	Cloned.Name = tostring(Player.UserId)
+
+	local TeleportButton = Cloned.Teleport
+	local ExamineButton = Cloned.Examine
+
+	local DisplayName = Cloned.DisplayName
+	local Username = Cloned.Username
+	local Profile = Cloned.Profile
+
+	DisplayName.Text = Player.DisplayName
+	Username.Text = Player.Name
+	Profile.Image = Services.Players:GetUserThumbnailAsync(
+		Player.UserId,
+		Enum.ThumbnailType.HeadShot,
+		Enum.ThumbnailSize.Size420x420
+	)
+
+	ExamineButton.MouseButton1Click:Connect(function()
+		Humanoid:InspectUser(Player.UserId)
+	end)
+
+	if (Player ~= LocalPlayer) then
+		TeleportButton.MouseButton1Click:Connect(function()
+			Humanoid:TeleportUserTo(LocalPlayer.Character, Player.Character)
+		end)
+		
+		if (Player:IsFriendsWith(LocalPlayer.UserId)) then
+			Username.Text = (Player.Name.." (Friends)")
+			if (Booleans.NotificationActive) then
+				warn('Your friend @'..Player.DisplayName..' has joined the game.')
+			end
+		else
+			if (Booleans.NotificationActive) then
+				warn('Player @'..Player.Display.Name..' has joined the game.')
+			end
+		end
+	else
+		TeleportButton.Visible = false
+	end
+end
+
+function Functions:RemoveFromList(Player)
+	if (ServerList.List:FindFirstChild(Player.UserId)) then
+		pcall(function()
+			Services.Debris:AddItem(ServerList.List:FindFirstChild(Player.UserId), 0)
+		end)
+	end
+end
+
+function Functions.EditDateAndTime()
+	local OST = os.time()
+	local CurrentTime = os.date("*t", OST)
+	local DayOfWeek, Month, DayOfMonth = os.date("%a", OST), os.date("%b", OST), os.date("%d", OST)
+	local DateToday = DateAndTime.DateToday
+	local Time = DateAndTime.Time
+
+	Time.Text = Functions:Time()
+	DateToday.Text = (DayOfWeek..", "..Month.." "..DayOfMonth)
+end
+
+function Functions.EditPlayerCount()
+	ServerListHeader.Text = ("Server <font size='16'>"..#Services.Players:GetPlayers().." · "..#Services.Players.MaxPlayers.."</font>")
+end
+
+function Humanoid:TeleportUserTo(SenderCharacter, VictimCharacter)
+	if (SenderCharacter) then
+		if (SenderCharacter:FindFirstChild('HumanoidRootPart')) then
+			local SenderHumanoidRootPart = SenderCharacter:WaitForChild('HumanoidRootPart')
+			if (VictimCharacter) then
+				if (VictimCharacter:FindFirstChild('HumanoidRootPart')) then
+					local VictimHumanoidRootPart = VictimCharacter:WaitForChild('HumanoidRootPart')
+					Functions:Tween(SenderHumanoidRootPart, 0.15, 'Out', 'Sine', {CFrame = VictimHumanoidRootPart.CFrame + Vector3.new(2, 1, 2)}, true)
+				end
+			end
+		end
+	end
+end
+
+function Humanoid:InspectUser(UserId)
+	Services.GuiService:InspectPlayerFromUserId(UserId)
+end
+
+Functions:Setup()
+Functions:SetupUserInput()
+Functions:SetFrameEnabled(false)
+
+Services.RunService:BindToRenderStep("EditPlayerCount", 1, function()
+	pcall(Functions.EditPlayerCount)
+end)
+
+Services.RunService:BindToRenderStep("EditDateAndTime", 2, function()
+	pcall(Functions.EditDateAndTime)
+end)
+
+RBXScriptConnections.Highlighter = Services.Players.PlayerAdded:Connect(function(Player)
+	Player.CharacterAdded:Connect(function(Character)
+		if (Booleans.HighlightActive) then
+			ESP:AddOutline(Character)
+			ESP:AddNameTag(Character)
+		end
+	end)
+end)
+
+RBXScriptConnections.AddPlayerToServerList = Services.Players.PlayerAdded:Connect(function(Player)
+	Functions:AddToList(Player)
+end)
+
+RBXScriptConnections.RemovePlayerFromServerList = Services.Players.PlayerRemoving:Connect(function(Player)
+	Functions:RemoveFromList(Player)
+end)
