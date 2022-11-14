@@ -47,6 +47,7 @@ local Services = {
 	RunService = game:GetService('RunService');
 	Debris = game:GetService('Debris');
 	GuiService = game:GetService('GuiService');
+	CoreGui = game:GetService('CoreGui');
 }
 
 local LocalPlayer = Services.Players.LocalPlayer
@@ -58,7 +59,7 @@ NewBlurEffect.Parent = Services.Lighting
 NewColorCorrectionEffect.Name = 'UIColorCorrection_'
 NewColorCorrectionEffect.Parent = Services.Lighting
 
-local Folder = Instance.new('Folder', Services.StarterGui)
+local Folder = Instance.new('Folder', Services.CoreGui)
 
 local Functions = {}
 local Keybinds = {
