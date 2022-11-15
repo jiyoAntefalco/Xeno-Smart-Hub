@@ -65,7 +65,7 @@ local Folder = Instance.new('Folder', Services.CoreGui)
 local Functions = {}
 local Keybinds = {
 	["Minimize"] = {
-		KeyCode = Enum.KeyCode.Z,
+		KeyCode = nil,
 		Enabled = false,
 	}
 }
@@ -556,20 +556,24 @@ local GridsButton = {
 }
 
 function Functions:Minimize()
-	if (Keybinds.Minimize.Enabled == false) then
-		Keybinds.Minimize.Enabled = true
-		Functions:SetFrameEnabled(true)
-		if (Booleans.FOV_Zoom) then
-			Functions:FOVZoom('Execute')
+	if (not IsKeybindSelectionEnabled) then
+		if (Keybinds.Minimize.Enabled == false) then
+			Keybinds.Minimize.Enabled = true
+			Functions:SetFrameEnabled(true)
+			if (Booleans.FOV_Zoom) then
+				Functions:FOVZoom('Execute')
+			end
+		elseif (Keybinds.Minimize.Enabled == true) then
+			Keybinds.Minimize.Enabled = false
+			Functions:SetFrameEnabled(false)
+			Functions:FOVZoom('Reset')
 		end
-	elseif (Keybinds.Minimize.Enabled == true) then
-		Keybinds.Minimize.Enabled = false
-		Functions:SetFrameEnabled(false)
-		Functions:FOVZoom('Reset')
 	end
 end
 
 function Functions:SetupUserInput()
+
+	Keybinds.Minimize.KeyCode = Enum.KeyCode.X
 
 	local Bubble = Minimize.Bubble
 	local Key = Bubble.Key
@@ -586,15 +590,9 @@ function Functions:SetupUserInput()
 		end
 		if (IsKeybindSelectionEnabled) then
 			if (Input.KeyCode ~= Enum.KeyCode.Unknown and not GameProcessedEvent) then
-				if (Input.KeyCode.Name ~= Current_KeyCode) then
-					Keybind.Text = tostring(Input.KeyCode.Name)
-					Keybinds.Minimize.KeyCode = Input.KeyCode
-					IsKeybindSelectionEnabled = false
-				else
-					Keybind.Text = Current_KeyCode
-					Key.Text = Current_KeyCode
-					IsKeybindSelectionEnabled = false
-				end
+				Keybind.Text = tostring(Input.KeyCode.Name)
+				Keybinds.Minimize.KeyCode = Input.KeyCode
+				IsKeybindSelectionEnabled = false
 			end
 		end
 	end)
@@ -602,7 +600,7 @@ function Functions:SetupUserInput()
 	Keybind.MouseButton1Click:Connect(function()
 		if (not IsKeybindSelectionEnabled) then
 			IsKeybindSelectionEnabled = true
-			Keybind.Text = "..."
+			Keybind.Text = "---"
 		end
 	end)
 
@@ -614,6 +612,9 @@ function Functions:SetupUserInput()
 	end)
 
 	Minimize.MouseButton1Click:Connect(function()
+		if (IsKeybindSelectionEnabled) then
+			return
+		end
 		Functions:Minimize()
 		Functions:RippleEffect(Minimize)
 	end)
@@ -640,6 +641,14 @@ function Functions:Setup()
 	local KeybindStroke = Keybind.UIStroke
 
 	local Back = ViewInformation.Back
+	local BackIcon = Back.Icon
+	local Header = ViewInformation.Header
+	local Object = ViewInformation.Object
+	local Description = ViewInformation.Description
+	local ViewInformationUIStroke = ViewInformation.UIStroke
+
+	local ServerListUIStroke = ServerList.UIStroke
+	local ServerListHeader = ServerList.Header
 
 	Back.MouseButton1Click:Connect(function()
 		if (Booleans.Viewing) then
@@ -665,6 +674,16 @@ function Functions:Setup()
 			Functions:Tween(UserInterfaceKeybinedStroke, 0.6, 'Out', 'Quart', {Transparency = 1}, true)
 			Functions:Tween(UserInterfaceKeybindHeader, 0.6, 'Out', 'Quart', {TextTransparency = 1}, true)
 			Functions:Tween(UserInterfaceKeybindBottom, 0.6, 'Out', 'Quart', {TextTransparency = 1}, true)
+
+			Functions:Tween(ViewInformationUIStroke, 0.6, 'Out', 'Quart', {Transparency = 1}, true)
+			Functions:Tween(Header, 0.6, 'Out', 'Quart', {TextTransparency = 1}, true)
+			Functions:Tween(Object, 0.6, 'Out', 'Quart', {TextTransparency = 1}, true)
+			Functions:Tween(Description, 0.6, 'Out', 'Quart', {TextTransparency = 1}, true)
+			Functions:Tween(BackIcon, 0.6, 'Out', 'Quart', {ImageTransparency = 1}, true)
+
+
+			Functions:Tween(ServerListUIStroke, 0.6, 'Out', 'Quart', {Transparency = 1}, true)
+			Functions:Tween(ServerListHeader, 0.6, 'Out', 'Quart', {TextTransparency = 1}, true)
 		else
 			Functions:Tween(ExpandUIStroke, 0.6, 'Out', 'Quart', {Transparency = 1}, true)
 			Functions:Tween(ExpandIcon, 0.6, 'Out', 'Quart', {ImageTransparency = 1}, true)
@@ -682,6 +701,16 @@ function Functions:Setup()
 			Functions:Tween(UserInterfaceKeybinedStroke, 0.6, 'Out', 'Quart', {Transparency = 0}, true)
 			Functions:Tween(UserInterfaceKeybindHeader, 0.6, 'Out', 'Quart', {TextTransparency = 0}, true)
 			Functions:Tween(UserInterfaceKeybindBottom, 0.6, 'Out', 'Quart', {TextTransparency = 0}, true)
+
+			Functions:Tween(ViewInformationUIStroke, 0.6, 'Out', 'Quart', {Transparency = 0}, true)
+			Functions:Tween(Header, 0.6, 'Out', 'Quart', {TextTransparency = 0}, true)
+			Functions:Tween(Object, 0.6, 'Out', 'Quart', {TextTransparency = 0}, true)
+			Functions:Tween(Description, 0.6, 'Out', 'Quart', {TextTransparency = 0}, true)
+			Functions:Tween(BackIcon, 0.6, 'Out', 'Quart', {ImageTransparency = 0}, true)
+
+
+			Functions:Tween(ServerListUIStroke, 0.6, 'Out', 'Quart', {Transparency = 0}, true)
+			Functions:Tween(ServerListHeader, 0.6, 'Out', 'Quart', {TextTransparency = 0}, true)
 		end
 	end)
 
@@ -724,12 +753,14 @@ function Functions:Setup()
 
 			if (Name == "Daytime") then
 				if (Services.Lighting:GetMinutesAfterMidnight() >= 870) then
+					Buttons.Enabled = true
 					Buttons.Function({
 						IsEnabled = true;
 						Object = Cloned;
 						ImageIcon = IconImage;
 					})
 				else
+					Buttons.Enabled = false
 					Buttons.Function({
 						IsEnabled = false;
 						Object = Cloned;
@@ -750,11 +781,17 @@ function Functions:Setup()
 						Cloned,
 						false
 					)
+
+					Functions:Tween(Cloned, 0.6, 'Out', 'Quad', {BackgroundTransparency = 1}, true)
 				else
 					Functions:SetVisibleObject(
 						Cloned,
 						true
 					)
+
+					if (Buttons.Enabled == true) then
+						Functions:Tween(Cloned, 0.6, 'Out', 'Quad', {BackgroundTransparency = 0}, true)
+					end
 				end
 			end)
 
@@ -817,6 +854,43 @@ function Functions:AddToList(Player)
 	local Username = Cloned.Username
 	local Profile = Cloned.Profile
 
+	local ProfileUIStroke = Profile.UIStroke
+
+	local ExamineButtonIcon = ExamineButton.Icon
+	local ExamineButtonUIStroke = ExamineButton.UIStroke
+	local TeleportButtonIcon = TeleportButton.Icon
+	local TeleportButtonUIStroke = TeleportButton.UIStroke
+
+	local ChangedPropertyEvent
+
+	ChangedPropertyEvent = Main:GetPropertyChangedSignal('Position'):Connect(function()
+		if (Main.Position ~= UDim2.new(0.5, 0, 0.5, 0)) then
+			Functions:Tween(Profile, 0.6, 'Out', 'Quart', {ImageTransparency = 1, BackgroundTransparency = 1}, true)
+			Functions:Tween(ProfileUIStroke, 0.6, 'Out', 'Quart', {Transparency = 1}, true)
+
+			Functions:Tween(ExamineButtonIcon, 0.6, 'Out', 'Quart', {ImageTransparency = 1}, true)
+			Functions:Tween(ExamineButtonUIStroke, 0.6, 'Out', 'Quart', {Transparency = 1}, true)
+
+			Functions:Tween(TeleportButtonIcon, 0.6, 'Out', 'Quart', {ImageTransparency = 1}, true)
+			Functions:Tween(TeleportButtonUIStroke, 0.6, 'Out', 'Quart', {Transparency = 1}, true)
+
+			Functions:Tween(DisplayName, 0.6, 'Out', 'Quart', {TextTransparency = 1}, true)
+			Functions:Tween(Username, 0.6, 'Out', 'Quart', {TextTransparency = 1}, true)
+		else
+			Functions:Tween(Profile, 0.6, 'Out', 'Quart', {ImageTransparency = 0, BackgroundTransparency = 0}, true)
+			Functions:Tween(ProfileUIStroke, 0.6, 'Out', 'Quart', {Transparency = 0.5}, true)
+
+			Functions:Tween(ExamineButtonIcon, 0.6, 'Out', 'Quart', {ImageTransparency = 0}, true)
+			Functions:Tween(ExamineButtonUIStroke, 0.6, 'Out', 'Quart', {Transparency = 0}, true)
+
+			Functions:Tween(TeleportButtonIcon, 0.6, 'Out', 'Quart', {ImageTransparency = 0}, true)
+			Functions:Tween(TeleportButtonUIStroke, 0.6, 'Out', 'Quart', {Transparency = 0}, true)
+
+			Functions:Tween(DisplayName, 0.6, 'Out', 'Quart', {TextTransparency = 0}, true)
+			Functions:Tween(Username, 0.6, 'Out', 'Quart', {TextTransparency = 0}, true)
+		end
+	end)
+
 	DisplayName.Text = Player.DisplayName
 	Username.Text = Player.Name
 	Profile.Image = Services.Players:GetUserThumbnailAsync(
@@ -847,6 +921,14 @@ function Functions:AddToList(Player)
 	else
 		TeleportButton.Visible = false
 	end
+
+	Cloned.AncestryChanged:Connect(function(Child, Parent)
+		if (Child == Cloned and Parent == nil) then
+			if (ChangedPropertyEvent) then
+				ChangedPropertyEvent:Disconnect()
+			end
+		end
+	end)
 end
 
 function Functions:RemoveFromList(Player)
