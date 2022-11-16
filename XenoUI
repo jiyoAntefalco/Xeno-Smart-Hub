@@ -62,6 +62,7 @@ NewColorCorrectionEffect.Parent = Services.Lighting
 
 local Folder = Instance.new('Folder', Services.CoreGui)
 
+local SoundEffects = {}
 local Functions = {}
 local Keybinds = {
 	["Minimize"] = {
@@ -117,6 +118,7 @@ local Booleans = {
 	NotificationActive = false,
 	FOV_Zoom = false,
 	Viewing = false,
+	SoundEffect = true,
 }
 
 local Colors = {
@@ -247,6 +249,36 @@ function Functions:Tween(Object, Time, EasingDirection, EasingStyle, Properties,
 	end
 end
 
+function SoundEffects:InsertSound(Parent, Properties)
+	local SFX = {
+		['Start'] = "rbxassetid://8503531171",
+		['Click_On'] = "rbxassetid://489105792",
+		['Click_Off'] = "rbxassetid://489109520",
+		['Minimize'] = "rbxassetid://11577879177",
+		['Maximize'] = "rbxassetid://11577880887",
+		['SciFi_Click'] = "rbxassetid://11577976565"
+	}
+
+	local SoundEffect = Instance.new('Sound', Parent)
+	SoundEffect.Volume = Properties.Volume or 0.8
+	SoundEffect.Pitch = Properties.Pitch or SoundEffect.Pitch
+	SoundEffect.Looped = Properties.Looped or SoundEffect.Looped
+	SoundEffect.Name = Properties.Name or "SoundEffect"
+	SoundEffect.TimePosition = Properties.TimePosition or 0
+
+	SoundEffect:Play()
+
+	SoundEffect.Ended:Connect(function()
+		Services.Debris:AddItem(SoundEffect, 0)
+	end)
+
+	if (typeof(Properties.Sound) == 'string') then
+		SoundEffect.SoundId = SFX[Properties.Sound]
+	elseif (typeof(Properties.Sound) == 'number') then
+		SoundEffect.SoundId = "rbxassetid://".. Properties.Sound
+	end
+end
+
 function Functions:RippleEffect(Button)
 
 	local function Ripple()
@@ -307,6 +339,17 @@ function Functions.ColorizeButton(Type, io)
 
 		Enabled.Text = "On"
 
+		if (io.AddSound ~= nil and io.AddSound == true) then
+			SoundEffects:InsertSound(
+				Object,
+				{
+					Volume = 0.6,
+					Sound = 'SciFi_Click',
+					TimePosition = 0.8
+				}
+			)
+		end
+
 		Functions:Tween(Object, 1, 'Out', 'Quad', {BackgroundTransparency = 0}, true)
 		Functions:Tween(UIStroke, 1, 'Out', 'Quad', {Color = SelectedColors.Accent}, true)
 		Functions:Tween(Header, 1, 'Out', 'Quad', {TextColor3 = SelectedColors.Primary}, true)
@@ -319,6 +362,17 @@ function Functions.ColorizeButton(Type, io)
 		local SelectedColors = Colors[Type]
 
 		Enabled.Text = "Off"
+
+		if (io.AddSound ~= nil and io.AddSound == true) then
+			SoundEffects:InsertSound(
+				Object,
+				{
+					Volume = 0.6,
+					Sound = 'SciFi_Click',
+					TimePosition = 0.8
+				}
+			)
+		end
 
 		Functions:Tween(Object, 1, 'Out', 'Quad', {BackgroundTransparency = 1}, true)
 		Functions:Tween(UIStroke, 1, 'Out', 'Quad', {Color = SelectedColors.Accent}, true)
@@ -420,6 +474,18 @@ end
 
 function Functions:ViewInformation(Name, io)
 	if (io.About) then
+
+		if (Booleans.SoundEffect ~= nil and Booleans.SoundEffect == true) then
+			SoundEffects:InsertSound(
+				ViewInformation.Object,
+				{
+					Volume = 0.6,
+					Sound = 'SciFi_Click',
+					TimePosition = 0.8
+				}
+			)
+		end
+
 		local About = io.About
 		Booleans.Viewing = true
 
@@ -438,6 +504,18 @@ end
 
 function Functions:UnviewInformation()
 	Booleans.Viewing = false
+
+	if (Booleans.SoundEffect ~= nil and Booleans.SoundEffect == true) then
+		SoundEffects:InsertSound(
+			ViewInformation.Object,
+			{
+				Volume = 0.6,
+				Sound = 'SciFi_Click',
+				TimePosition = 0.8
+			}
+		)
+	end
+
 	Functions:Tween(ViewInformation, 0.9, 'In', 'Sine', {Position = UDim2.new(-5, 0,0.985, 0)}, true)
 	Functions:Tween(Grids, 0.6, 'Out', 'Quart', {Position = UDim2.new(0, 0,1, 0)}, true)
 end
@@ -560,12 +638,24 @@ function Functions:Minimize()
 		if (Keybinds.Minimize.Enabled == false) then
 			Keybinds.Minimize.Enabled = true
 			Functions:SetFrameEnabled(true)
+			SoundEffects:InsertSound(Main,
+				{
+					Volume = 0.9,
+					Sound = 'Maximize',
+				}
+			)
 			if (Booleans.FOV_Zoom) then
 				Functions:FOVZoom('Execute')
 			end
 		elseif (Keybinds.Minimize.Enabled == true) then
 			Keybinds.Minimize.Enabled = false
 			Functions:SetFrameEnabled(false)
+			SoundEffects:InsertSound(Main,
+				{
+					Volume = 0.9,
+					Sound = 'Minimize',
+				}
+			)
 			Functions:FOVZoom('Reset')
 		end
 	end
@@ -606,8 +696,7 @@ function Functions:SetupUserInput()
 
 	Expand.MouseButton1Click:Connect(function()
 		if (Keybinds.Minimize.Enabled == false) then
-			Keybinds.Minimize.Enabled = true
-			Functions:SetFrameEnabled(true)
+			Functions:Minimize()
 		end
 	end)
 
@@ -805,6 +894,7 @@ function Functions:Setup()
 						IsEnabled = Buttons.Enabled;
 						Object = Cloned;
 						ImageIcon = IconImage;
+						AddSound = Booleans.SoundEffect;	
 					})
 				elseif (Buttons.Enabled == true) then
 					Buttons.Enabled = false
@@ -812,6 +902,7 @@ function Functions:Setup()
 						IsEnabled = Buttons.Enabled;
 						Object = Cloned;
 						ImageIcon = IconImage;
+						AddSound = Booleans.SoundEffect;
 					})
 				end
 			end)
@@ -901,11 +992,33 @@ function Functions:AddToList(Player)
 
 	ExamineButton.MouseButton1Click:Connect(function()
 		Humanoid:InspectUser(Player.UserId)
+
+		if (Booleans.SoundEffect ~= nil and Booleans.SoundEffect == true) then
+			SoundEffects:InsertSound(
+				TeleportButton,
+				{
+					Volume = 0.6,
+					Sound = 'SciFi_Click',
+					TimePosition = 0.8
+				}
+			)
+		end
 	end)
 
 	if (Player ~= LocalPlayer) then
-		TeleportButton.MouseButton1Click:Connect(function()
+		TeleportButton.MouseButton1Click:Connect(function()	
 			Humanoid:TeleportUserTo(LocalPlayer.Character, Player.Character)
+
+			if (Booleans.SoundEffect ~= nil and Booleans.SoundEffect == true) then
+				SoundEffects:InsertSound(
+					TeleportButton,
+					{
+						Volume = 0.6,
+						Sound = 'SciFi_Click',
+						TimePosition = 0.8
+					}
+				)
+			end
 		end)
 
 		if (Player:IsFriendsWith(LocalPlayer.UserId)) then
@@ -972,10 +1085,6 @@ function Humanoid:InspectUser(UserId)
 	Services.GuiService:InspectPlayerFromUserId(UserId)
 end
 
-Functions:Setup()
-Functions:SetupUserInput()
-Functions:SetFrameEnabled(false)
-
 Services.RunService:BindToRenderStep("EditPlayerCount", 1, function()
 	pcall(Functions.EditPlayerCount)
 end)
@@ -1000,3 +1109,14 @@ end)
 RBXScriptConnections.RemovePlayerFromServerList = Services.Players.PlayerRemoving:Connect(function(Player)
 	Functions:RemoveFromList(Player)
 end)
+
+Functions:SetFrameEnabled(true)
+SoundEffects:InsertSound(game.SoundService,
+	{
+		Volume = 1,
+		Sound = 'Start', 
+	}
+)
+
+Functions:Setup()
+Functions:SetupUserInput()
