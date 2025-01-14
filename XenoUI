@@ -138,7 +138,7 @@ function Functions:Time()
 	local SECOND = math.floor(tick() % 60)
 	local AP = HOUR > 11 and 'PM' or 'AM'
 	HOUR = (HOUR % 12 == 0 and 12 or HOUR % 12)
-	HOUR = HOUR < 10 and HOUR
+	HOUR = HOUR < 10 and '0' .. HOUR or HOUR
 	MINUTE = MINUTE < 10 and '0' .. MINUTE or MINUTE
 	SECOND = SECOND < 10 and '0' .. SECOND or SECOND
 	return HOUR .. ':' .. MINUTE
