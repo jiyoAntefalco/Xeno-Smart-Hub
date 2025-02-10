@@ -7,15 +7,15 @@ return function(guiObj)
 	local DEFAULT_RESOLUTION = 720
 	local Collection = game:GetService("CollectionService")
 	local camera = workspace.CurrentCamera
-	local currentScale = script:GetAttribute(SCALE_ATTRIBUTE)
+	local currentScale = guiObj:GetAttribute(SCALE_ATTRIBUTE)
 	if currentScale == nil then
 		currentScale = DEFAULT_SCALE
-		script:SetAttribute(SCALE_ATTRIBUTE, currentScale)
+		guiObj:SetAttribute(SCALE_ATTRIBUTE, currentScale)
 	end
-	local resolution = script:GetAttribute(RESOLUTION_ATTRIBUTE)
+	local resolution = guiObj:GetAttribute(RESOLUTION_ATTRIBUTE)
 	if resolution == nil then
 		resolution = DEFAULT_RESOLUTION
-		script:SetAttribute(RESOLUTION_ATTRIBUTE, resolution)
+		guiObj:SetAttribute(RESOLUTION_ATTRIBUTE, resolution)
 	end
 	local multiplier = 1/resolution
 	local scales = {}
@@ -42,7 +42,7 @@ return function(guiObj)
 			currentScale = multiplier * sizeX
 		end
 
-		script:SetAttribute(SCALE_ATTRIBUTE, currentScale)
+		guiObj:SetAttribute(SCALE_ATTRIBUTE, currentScale)
 		for i, scale in ipairs(scales) do
 			applyScale(scale)
 		end
@@ -51,8 +51,8 @@ return function(guiObj)
 		scaleAdded(scale)
 	end
 	updateScale()
-	script:GetAttributeChangedSignal(RESOLUTION_ATTRIBUTE):Connect(function()
-		resolution = script:GetAttribute(RESOLUTION_ATTRIBUTE)
+	guiObj:GetAttributeChangedSignal(RESOLUTION_ATTRIBUTE):Connect(function()
+		resolution = guiObj:GetAttribute(RESOLUTION_ATTRIBUTE)
 		multiplier = 1/resolution
 		updateScale()
 	end)
