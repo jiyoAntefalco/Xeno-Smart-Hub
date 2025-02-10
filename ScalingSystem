@@ -1,0 +1,77 @@
+return function(guiObj)
+    local SCALE_TAG = "UIScale"
+    local SCALE_ATTRIBUTE = "Scale"
+    local RESOLUTION_ATTRIBUTE = "Resolution"
+    local DEFAULT_SCALE = 1
+    local DEFAULT_RESOLUTION = 720
+    local Collection = game:GetService("CollectionService")
+    local camera = workspace.CurrentCamera
+    local scriptRef = script -- Reference script to prevent excessive calls
+    local scales = {}
+
+    -- Initialize attributes
+    local currentScale = scriptRef:GetAttribute(SCALE_ATTRIBUTE) or DEFAULT_SCALE
+    scriptRef:SetAttribute(SCALE_ATTRIBUTE, currentScale)
+
+    local resolution = scriptRef:GetAttribute(RESOLUTION_ATTRIBUTE) or DEFAULT_RESOLUTION
+    scriptRef:SetAttribute(RESOLUTION_ATTRIBUTE, resolution)
+
+    local multiplier = 1 / resolution
+
+    -- Function to apply scale
+    local function applyScale(scale)
+        scale.Scale = currentScale
+    end
+
+    -- Function to handle new UIScale instance
+    local function scaleAdded(instance)
+        assert(instance:IsA("GuiObject"), instance:GetFullName() .. " is not a GuiObject")
+
+        local scale = guiObject:FindFirstChildOfClass("UIScale") or Instance.new("UIScale", guiObj)
+        Collection:AddTag(scale, SCALE_TAG)
+
+        applyScale(scale)
+        table.insert(scales, scale)
+    end
+
+    -- Function to remove UIScale instance
+    local function scaleRemoved(scale)
+        local index = table.find(scales, scale)
+        if index then
+            scale:Destroy()
+            table.remove(scales, index)
+        end
+    end
+
+    -- Function to update the scaling
+    local function updateScale()
+        local sizeX, sizeY = camera.ViewportSize.X, camera.ViewportSize.Y
+        currentScale = multiplier * (sizeY < sizeX and sizeY or sizeX)
+        scriptRef:SetAttribute(SCALE_ATTRIBUTE, currentScale)
+
+        for _, scale in ipairs(scales) do
+            applyScale(scale)
+        end
+    end
+
+    -- Apply UIScale to all tagged objects
+    for _, guiObject in ipairs(Collection:GetTagged(SCALE_TAG)) do
+        scaleAdded(guiObject)
+    end
+
+    updateScale()
+
+    -- Attribute change connections
+    scriptRef:GetAttributeChangedSignal(RESOLUTION_ATTRIBUTE):Connect(function()
+        resolution = scriptRef:GetAttribute(RESOLUTION_ATTRIBUTE)
+        multiplier = 1 / resolution
+        updateScale()
+    end)
+
+    -- Camera size change connection
+    camera:GetPropertyChangedSignal("ViewportSize"):Connect(updateScale)
+
+    -- CollectionService connections
+    Collection:GetInstanceAddedSignal(SCALE_TAG):Connect(scaleAdded)
+    Collection:GetInstanceRemovedSignal(SCALE_TAG):Connect(scaleRemoved)
+end
