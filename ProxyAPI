@@ -1,0 +1,37 @@
+local ScriptId = "AKfycbxFS-GVhVv8Zshq6NtVaiAbIZi-bF42LKCSd1QwRA_ZyXX47MQ"
+
+local Url = "https://script.google.com/macros/s/" .. ScriptId .. "/exec"
+local HttpService = game:GetService('HttpService')
+local Module = {}
+
+
+function JSONDecode(JSON)
+	local JSONTable = {} 
+	pcall(function ()
+		JSONTable = HttpService:JSONDecode(JSON)
+	end) 
+	return JSONTable
+end
+
+function JSONEncode(JSON)
+	local JSONTable = {} 
+	pcall(function()
+		JSONTable = HttpService:JSONEncode(JSON)
+	end)
+	return JSONTable
+end
+
+
+function Module:GetAsync(Link)
+	local Middle = "?q="
+	local JSON = game:HttpGet(Url .. Middle ..game.HttpService:UrlEncode(Link))
+	local Result = JSONDecode(JSON)
+	if Result.result == "success" then
+		return Result.response
+	else
+		warn(tostring(Link).." failed to fetch because "..tostring(Result.error))
+		return
+	end
+end
+
+return Module
