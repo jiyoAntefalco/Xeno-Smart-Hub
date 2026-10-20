@@ -109,6 +109,22 @@ function APIManager.new()
 		)
 	end
 
+	function API.UsersAPI:FollowersCount(UserId)
+		local Get = Request(
+			("https://friends.roblox.com/v1/users/%d/followers/count"):format(UserId)
+		)
+	
+		return Get and Get.count or nil
+	end
+
+	function API.UsersAPI:FollowingsCount(UserId)
+		local Get = Request(
+			("https://friends.roblox.com/v1/users/%d/followings/count"):format(UserId)
+		)
+
+		return Get and Get.count or nil
+	end
+
 	function API.UsersAPI:NameHistory(UserId, Limits, Asc)
 		local Sort = Asc and "Asc" or "Desc"
 		local Link = ("https://users.roblox.com/v1/users/%d/username-history?limit=%d&sortOrder=%s")
