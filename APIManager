@@ -1,0 +1,196 @@
+local HttpService = game:GetService("HttpService")
+
+local APIManager = {}
+
+function APIManager.new(Id)
+	local GoogleUrl = "https://script.google.com/macros/s/" .. Id .. "/exec"
+	local API = {
+		GoogleUrl = GoogleUrl
+	}
+
+	local function Request(Link)
+		local Success, Result = pcall(function()
+			local EncodedUrl = HttpService:UrlEncode(Link)
+			local Response = game:HttpGet(GoogleUrl .. "?q=" .. EncodedUrl)
+			local Data = HttpService:JSONDecode(Response)
+
+			if Data.result ~= "success" then
+				error(tostring(Data.error or "Request failed"))
+			end
+
+			return Data.response
+		end)
+
+		if not Success then
+			warn("API request failed:", Result)
+			return nil
+		end
+
+		return Result
+	end
+
+	local function CursorRequest(Link, Process)
+		local Get = Request(Link)
+
+		if not Get then
+			return nil
+		end
+
+		local function ProcessData(Data)
+			if Process then
+				return Process(Data)
+			end
+
+			return Data
+		end
+
+		local Cursor = {
+			NextCursor = Get.nextPageCursor,
+			Data = ProcessData(Get.data),
+			PageIndex = 1,
+			HistoryData = {}
+		}
+
+		Cursor.HistoryData[1] = {
+			Cursor = nil,
+			NextCursor = Get.nextPageCursor,
+			Data = Cursor.Data
+		}
+
+		function Cursor:Next()
+			if not self.NextCursor then
+				warn("There are no more pages with", Link)
+				return false
+			end
+
+			local PageCursor = self.NextCursor
+			local NewGet = Request(
+				Link .. "&cursor=" .. HttpService:UrlEncode(PageCursor)
+			)
+
+			if not NewGet then
+				return false
+			end
+
+			self.Data = ProcessData(NewGet.data)
+			self.NextCursor = NewGet.nextPageCursor
+			self.PageIndex += 1
+
+			self.HistoryData[self.PageIndex] = {
+				Cursor = PageCursor,
+				NextCursor = NewGet.nextPageCursor,
+				Data = self.Data
+			}
+
+			return true
+		end
+
+		function Cursor:Before()
+			local Previous = self.HistoryData[self.PageIndex - 1]
+
+			if not Previous then
+				warn("There is no previous page with", Link)
+				return false
+			end
+
+			self.PageIndex -= 1
+			self.Data = Previous.Data
+			self.NextCursor = Previous.NextCursor
+
+			return true
+		end
+
+		return Cursor
+	end
+
+	API.UsersAPI = {}
+
+	function API.UsersAPI:Search(Keyword, Limits)
+		local Link = ("https://users.roblox.com/v1/users/search?keyword=%s&limit=%d")
+			:format(HttpService:UrlEncode(Keyword), Limits)
+
+		return CursorRequest(Link)
+	end
+
+	function API.UsersAPI:UserInfo(UserId)
+		return Request(
+			("https://users.roblox.com/v1/users/%d"):format(UserId)
+		)
+	end
+
+	function API.UsersAPI:NameHistory(UserId, Limits, Asc)
+		local Sort = Asc and "Asc" or "Desc"
+		local Link = ("https://users.roblox.com/v1/users/%d/username-history?limit=%d&sortOrder=%s")
+			:format(UserId, Limits, Sort)
+
+		return CursorRequest(Link, function(Data)
+			local NewData = {}
+
+			for _, Entry in pairs(Data) do
+				table.insert(NewData, Entry.name)
+			end
+
+			return NewData
+		end)
+	end
+
+	API.AvatarAPI = {}
+
+	function API.AvatarAPI:AvatarInfo(UserId)
+		return Request(
+			("https://avatar.roblox.com/v1/users/%d/avatar"):format(UserId)
+		)
+	end
+
+	function API.AvatarAPI:GetOutfits(UserId)
+		local Get = Request(
+			("https://avatar.roblox.com/v1/users/%d/outfits"):format(UserId)
+		)
+
+		return Get and Get.data or nil
+	end
+
+	function API.AvatarAPI:GetCurrentAssets(UserId)
+		local Get = Request(
+			("https://avatar.roblox.com/v1/users/%d/currently-wearing"):format(UserId)
+		)
+
+		return Get and Get.assetIds or nil
+	end
+
+	function API.AvatarAPI:GetOutfitIdDetails(OutfitId)
+		return Request(
+			("https://avatar.roblox.com/v1/outfits/%d/details"):format(OutfitId)
+		)
+	end
+
+	API.GroupsAPI = {}
+
+	function API.GroupsAPI:GetRoles(GroupId, Limits)
+		local Get = Request(
+			("https://groups.roblox.com/v2/users/%d/groups/roles"):format(GroupId)
+		)
+
+		return Get and Get.data or nil
+	end
+
+	function API.GroupsAPI:GetWallPosts(GroupId, Limits, Asc)
+		local Sort = Asc and "Asc" or "Desc"
+		local Link = ("https://groups.roblox.com/v2/groups/%d/wall/posts?limit=%d&sortOrder=%s")
+			:format(GroupId, Limits, Sort)
+
+		return CursorRequest(Link)
+	end
+
+	function API.GroupsAPI:NameHistory(GroupId, Limits, Asc)
+		local Sort = Asc and "Asc" or "Desc"
+		local Link = ("https://groups.roblox.com/v1/groups/%d/name-history?limit=%d&sortOrder=%s")
+			:format(GroupId, Limits, Sort)
+
+		return CursorRequest(Link)
+	end
+
+	return API
+end
+
+return APIManager
