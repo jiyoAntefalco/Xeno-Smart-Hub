@@ -1,24 +1,14 @@
+
 local HttpService = game:GetService("HttpService")
 
 local APIManager = {}
 
-function APIManager.new(Id)
-	local GoogleUrl = "https://script.google.com/macros/s/" .. Id .. "/exec"
-	local API = {
-		GoogleUrl = GoogleUrl
-	}
+function APIManager.new()
+	local API = {}
 
 	local function Request(Link)
 		local Success, Result = pcall(function()
-			local EncodedUrl = HttpService:UrlEncode(Link)
-			local Response = game:HttpGet(GoogleUrl .. "?q=" .. EncodedUrl)
-			local Data = HttpService:JSONDecode(Response)
-
-			if Data.result ~= "success" then
-				error(tostring(Data.error or "Request failed"))
-			end
-
-			return Data.response
+			return HttpService:JSONDecode(game:HttpGet(Link))
 		end)
 
 		if not Success then
@@ -64,8 +54,9 @@ function APIManager.new(Id)
 			end
 
 			local PageCursor = self.NextCursor
+			local Separator = Link:find("?", 1, true) and "&" or "?"
 			local NewGet = Request(
-				Link .. "&cursor=" .. HttpService:UrlEncode(PageCursor)
+				Link .. Separator .. "cursor=" .. HttpService:UrlEncode(PageCursor)
 			)
 
 			if not NewGet then
@@ -166,9 +157,9 @@ function APIManager.new(Id)
 
 	API.GroupsAPI = {}
 
-	function API.GroupsAPI:GetRoles(GroupId, Limits)
+	function API.GroupsAPI:GetRoles(UserId, Limits)
 		local Get = Request(
-			("https://groups.roblox.com/v2/users/%d/groups/roles"):format(GroupId)
+			("https://groups.roblox.com/v2/users/%d/groups/roles"):format(UserId)
 		)
 
 		return Get and Get.data or nil
